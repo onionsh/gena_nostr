@@ -1,0 +1,312 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gena</title>
+    <title>Bybit BTC Inverse Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #1a1a2e; /* สีพื้นหลังเข้ม */
+            color: #e0e0e0; /* สีตัวอักษรสว่าง */
+            font-family: 'Arial', sans-serif;
+            overflow: hidden; /* ซ่อน scrollbar กรณีที่มีเอฟเฟกต์ */
+            position: relative;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .price-up { color: #10b981; transition: color 0.3s; }
+        .price-down { color: #ef4444; transition: color 0.3s; }
+        .card-glow:hover { border-color: #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.1); }
+    </style>
+</head>
+<body class="bg-[#0b0e11] text-gray-100 min-h-screen p-4 md:p-8">
+
+        .container {
+            text-align: center;
+            opacity: 0; /* เริ่มต้นให้จางหายไป */
+            animation: fadeIn 2s forwards; /* เพิ่มแอนิเมชัน fadeIn */
+        }
+<div id="app" class="max-w-6xl mx-auto">
+    <!-- Header Area -->
+    <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                <span class="text-yellow-500 text-4xl">₿</span> Bybit BTC Inverse Terminal
+            </h1>
+            <p class="text-gray-400 text-sm mt-1">ติดตามเฉพาะราคา BTC Inverse (Perpetual & Delivery) อัตโนมัติ</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-right">
+                <div class="text-xs text-gray-500 uppercase font-bold tracking-widest">Server Time</div>
+                <div class="text-sm font-mono text-gray-300">{{ lastUpdated }}</div>
+            </div>
+            <button @click="fetchAllData" class="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-all border border-gray-700">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            </button>
+        </div>
+    </header>
+
+        h1 {
+            font-size: 8em; /* ขนาดตัวอักษรใหญ่มาก */
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            text-shadow: 0 0 15px rgba(253, 216, 53, 0.7), 0 0 30px rgba(253, 216, 53, 0.5); /* เงาเรืองแสงสีเหลืองอ่อน */
+            position: relative;
+            animation: neonPulse 1.5s infinite alternate; /* แอนิเมชันเรืองแสงกะพริบ */
+        }
+    <!-- Main Content -->
+    <main class="space-y-8">
+        
+        <!-- SECTION 1: SPOT MARKET (Reference) -->
+        <section>
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span> Spot Market Reference
+            </h2>
+            <div v-if="spot" class="bg-[#1e2329] border border-gray-800 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-500 font-bold text-xl">S</div>
+                    <div>
+                        <div class="text-xl font-bold">BTC / USDT</div>
+                        <div class="text-xs text-gray-400 italic">Bybit Spot</div>
+                    </div>
+                </div>
+                <div class="text-4xl font-mono font-bold" :class="getPriceColor(spot.lastPrice, spot.prevPrice)">
+                    ${{ formatPrice(spot.lastPrice) }}
+                </div>
+                <div class="flex gap-8">
+                    <div class="text-center">
+                        <div class="text-xs text-gray-500 uppercase">24h Change</div>
+                        <div :class="spot.change24h >= 0 ? 'text-green-400' : 'text-red-400'" class="font-bold font-mono">
+                            {{ spot.change24h > 0 ? '+' : '' }}{{ spot.change24h }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        h1::before {
+            content: 'Gena';
+            position: absolute;
+            top: 0;
+            left: 0;
+            filter: blur(10px);
+            opacity: 0.8;
+            color: #fdd835; /* สีเรืองแสงด้านล่างสีเหลืองอ่อน */
+            z-index: -1;
+        }
+        <!-- SECTION 2: BTC INVERSE CONTRACTS (Dynamic List) -->
+        <section>
+            <div class="flex justify-between items-end mb-4">
+                <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                    <span class="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></span> BTC Inverse Markets
+                </h2>
+                <span class="text-xs text-gray-400 bg-gray-800 px-2 py-1 rounded">พบ {{ futureList.length }} สัญญา Inverse</span>
+            </div>
+
+        /* แอนิเมชันสำหรับ fadeIn */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+            <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="i in 3" :key="i" class="h-32 bg-gray-800/50 animate-pulse rounded-xl"></div>
+            </div>
+
+        /* แอนิเมชันสำหรับ neonPulse */
+        @keyframes neonPulse {
+            from {
+                text-shadow: 0 0 15px rgba(253, 216, 53, 0.7), 0 0 30px rgba(253, 216, 53, 0.5); /* เงาเรืองแสงสีเหลืองอ่อน */
+            }
+            to {
+                text-shadow: 0 0 25px rgba(253, 216, 53, 0.9), 0 0 50px rgba(253, 216, 53, 0.7); /* เงาเรืองแสงสีเหลืองอ่อน */
+            }
+        }
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Dynamic Card for each Inverse Symbol -->
+                <div v-for="item in futureList" :key="item.symbol" 
+                     class="bg-[#1e2329] border border-gray-800 rounded-xl p-5 card-glow transition-all duration-300">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <div class="text-sm font-bold text-orange-400">{{ item.symbol }}</div>
+                            <!-- ตรวจสอบว่าเป็น Perpetual หรือ Delivery จากการมีตัวเลขวันที่ -->
+                            <div class="text-[10px] text-gray-500 uppercase tracking-tighter" v-if="!item.symbol.match(/\d/g)">
+                                Inverse Perpetual
+                            </div>
+                            <div class="text-[10px] text-purple-400 uppercase tracking-tighter" v-else>
+                                Inverse Delivery
+                            </div>
+                        </div>
+                        <div v-if="item.fundingRate" class="text-[10px] bg-gray-800 px-1.5 py-0.5 rounded text-gray-400">
+                            F: {{ (item.fundingRate * 100).toFixed(4) }}%
+                        </div>
+                    </div>
+
+        /* เพิ่มเอฟเฟกต์ดาว (ไม่บังคับ) */
+        .star {
+            position: absolute;
+            background-color: #fff;
+            border-radius: 50%;
+            animation: twinkle 5s infinite;
+        }
+                    <div class="flex justify-between items-baseline">
+                        <div class="text-2xl font-mono font-bold" :class="getPriceColor(item.lastPrice, item.prevPrice)">
+                            {{ formatPrice(item.lastPrice) }}
+                        </div>
+                        <div class="text-xs" :class="item.change24h >= 0 ? 'text-green-400' : 'text-red-400'">
+                            {{ item.change24h > 0 ? '+' : '' }}{{ item.change24h }}%
+                        </div>
+                    </div>
+
+        @keyframes twinkle {
+            0%, 100% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Gena V3</h1>
+    </div>
+
+    <script>
+        // สร้างดาวแบบสุ่ม (ไม่บังคับ)
+        function createStars(numStars) {
+            for (let i = 0; i < numStars; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.width = star.style.height = `${Math.random() * 3 + 1}px`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.animationDelay = `${Math.random() * 5}s`;
+                document.body.appendChild(star);
+            }
+                    <!-- ส่วนแสดงผล Spread ที่คำนวณโดยการนำราคา Future ลบด้วยราคา Spot -->
+                    <div class="mt-3 pt-3 border-t border-gray-800 flex justify-between items-center text-[10px] text-gray-500 uppercase">
+                        <span>Spread vs Spot</span>
+                        <div class="text-right">
+                            <span class="font-mono block" :class="spot && (item.lastPrice - spot.lastPrice > 0) ? 'text-green-500' : 'text-red-500'">
+                                {{ spot ? (item.lastPrice - spot.lastPrice).toFixed(2) : '0.00' }}
+                            </span>
+                            <span class="font-mono text-[9px] block opacity-80" :class="spot && (item.lastPrice - spot.lastPrice > 0) ? 'text-green-500' : 'text-red-500'">
+                                {{ spot ? (((item.lastPrice - spot.lastPrice) / spot.lastPrice) * 100).toFixed(3) : '0.000' }}%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="mt-12 text-center text-gray-600 text-[10px] uppercase tracking-widest pb-8">
+        Bybit API V5 Connection • Only BTC Inverse Contracts • Auto-refresh 5s
+    </footer>
+</div>
+
+<script>
+    const { createApp, ref, onMounted, onUnmounted } = Vue;
+
+    createApp({
+        setup() {
+            const spot = ref(null);
+            const futureList = ref([]);
+            const loading = ref(true);
+            const lastUpdated = ref('--:--:--');
+            let interval = null;
+
+            const fetchAllData = async () => {
+                try {
+                    // 1. ดึง Spot BTCUSDT เพื่อใช้เทียบ Spread
+                    const spotRes = await axios.get('https://api.bybit.com/v5/market/tickers?category=spot&symbol=BTCUSDT');
+                    if (spotRes.data.retCode === 0) {
+                        const d = spotRes.data.result.list[0];
+                        const oldPrice = spot.value ? spot.value.lastPrice : 0;
+                        spot.value = {
+                            lastPrice: parseFloat(d.lastPrice),
+                            prevPrice: oldPrice,
+                            change24h: (parseFloat(d.price24hPcnt) * 100).toFixed(2)
+                        };
+                    }
+
+                    // 2. ดึงเฉพาะ category=inverse
+                    const inverseRes = await axios.get('https://api.bybit.com/v5/market/tickers?category=inverse');
+
+                    if (inverseRes.data.retCode === 0) {
+                        const btcInverse = inverseRes.data.result.list
+                            .filter(item => item.symbol.startsWith('BTC'))
+                            .map(item => {
+                                const existing = futureList.value.find(f => f.symbol === item.symbol);
+                                return {
+                                    symbol: item.symbol,
+                                    lastPrice: parseFloat(item.lastPrice),
+                                    prevPrice: existing ? existing.lastPrice : 0,
+                                    change24h: (parseFloat(item.price24hPcnt) * 100).toFixed(2),
+                                    fundingRate: item.fundingRate ? parseFloat(item.fundingRate) : null
+                                };
+                            });
+
+                        futureList.value = btcInverse.sort((a, b) => {
+                            if (a.symbol === 'BTCUSD') return -1;
+                            if (b.symbol === 'BTCUSD') return 1;
+                            return a.symbol.localeCompare(b.symbol);
+                        });
+                    }
+
+                    lastUpdated.value = new Date().toLocaleTimeString();
+                    loading.value = false;
+                } catch (error) {
+                    console.error("API Error:", error);
+                }
+            };
+
+            const formatPrice = (p) => p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            
+            const getPriceColor = (current, prev) => {
+                if (!prev || current === prev) return 'text-white';
+                return current > prev ? 'price-up' : 'price-down';
+            };
+
+            onMounted(() => {
+                fetchAllData();
+                interval = setInterval(fetchAllData, 5000);
+            });
+
+            onUnmounted(() => clearInterval(interval));
+
+            return {
+                spot,
+                futureList,
+                loading,
+                lastUpdated,
+                fetchAllData,
+                formatPrice,
+                getPriceColor
+            };
+        }
+        createStars(100); // สร้างดาว 100 ดวง
+    </script>
+    }).mount('#app');
+</script>
+
+</body>
+</html>
