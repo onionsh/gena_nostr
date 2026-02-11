@@ -99,29 +99,42 @@
                             </div>
                         </div>
                         <div v-if="item.fundingRate" class="text-[10px] bg-gray-800 px-1.5 py-0.5 rounded text-gray-400">
-                            F: {{ (item.fundingRate * 100).toFixed(4) }}%
+                            Funding Rate : {{ (item.fundingRate * 100).toFixed(4) }}%
                         </div>
                     </div>
 
-                    <div class="flex justify-between items-baseline">
+                    <div class="flex justify-between items-baseline mb-3">
                         <div class="text-2xl font-mono font-bold" :class="getPriceColor(item.lastPrice, item.prevPrice)">
                             {{ formatPrice(item.lastPrice) }}
                         </div>
-                        <div class="text-xs" :class="item.change24h >= 0 ? 'text-green-400' : 'text-red-400'">
-                            {{ item.change24h > 0 ? '+' : '' }}{{ item.change24h }}%
-                        </div>
                     </div>
 
-                    <!-- ส่วนแสดงผล Spread ที่คำนวณโดยการนำราคา Future ลบด้วยราคา Spot -->
-                    <div class="mt-3 pt-3 border-t border-gray-800 flex justify-between items-center text-[10px] text-gray-500 uppercase">
-                        <span>Spread vs Spot</span>
-                        <div class="text-right">
-                            <span class="font-mono block" :class="spot && (item.lastPrice - spot.lastPrice > 0) ? 'text-green-500' : 'text-red-500'">
-                                {{ spot ? (item.lastPrice - spot.lastPrice).toFixed(2) : '0.00' }}
-                            </span>
-                            <span class="font-mono text-[9px] block opacity-80" :class="spot && (item.lastPrice - spot.lastPrice > 0) ? 'text-green-500' : 'text-red-500'">
-                                {{ spot ? (((item.lastPrice - spot.lastPrice) / spot.lastPrice) * 100).toFixed(3) : '0.000' }}%
-                            </span>
+                    <div class="space-y-3">
+                        <!-- ส่วนที่ 1: Symbol vs Spot (แสดงเสมอ) -->
+                        <div class="pt-3 border-t border-gray-800 flex justify-between items-center text-[10px] text-gray-500 uppercase">
+                            <span>{{ item.symbol }} vs Spot</span>
+                            <div class="text-right">
+                                <span class="font-mono block" :class="spot && (item.lastPrice - spot.lastPrice > 0) ? 'text-green-500' : 'text-red-500'">
+                                    {{ spot ? (item.lastPrice - spot.lastPrice).toFixed(2) : '0.00' }}
+                                </span>
+                                <span class="font-mono text-[9px] block opacity-80" :class="spot && (item.lastPrice - spot.lastPrice > 0) ? 'text-green-500' : 'text-red-500'">
+                                    {{ spot ? (((item.lastPrice - spot.lastPrice) / spot.lastPrice) * 100).toFixed(3) : '0.000' }}%
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- ส่วนที่ 2: Delivery Future vs Inverse Perpetual (เฉพาะสัญญาที่มีวันหมดอายุ) -->
+                        <div v-if="item.symbol.match(/\d/g) && getPerpPrice()" 
+                             class="pt-3 border-t border-gray-800/50 flex justify-between items-center text-[10px] text-gray-400 uppercase">
+                            <span>{{ item.symbol }} vs Perpetual</span>
+                            <div class="text-right">
+                                <span class="font-mono block" :class="(item.lastPrice - getPerpPrice() > 0) ? 'text-blue-400' : 'text-pink-400'">
+                                    {{ (item.lastPrice - getPerpPrice()).toFixed(2) }}
+                                </span>
+                                <span class="font-mono text-[9px] block opacity-80" :class="(item.lastPrice - getPerpPrice() > 0) ? 'text-blue-400' : 'text-pink-400'">
+                                    {{ (((item.lastPrice - getPerpPrice()) / getPerpPrice()) * 100).toFixed(3) }}%
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -190,6 +203,12 @@
                 }
             };
 
+            // ฟังก์ชันสำหรับดึงราคาของ Inverse Perpetual (BTCUSD) จากรายการ
+            const getPerpPrice = () => {
+                const perp = futureList.value.find(f => f.symbol === 'BTCUSD');
+                return perp ? perp.lastPrice : null;
+            };
+
             const formatPrice = (p) => p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             
             const getPriceColor = (current, prev) => {
@@ -211,7 +230,8 @@
                 lastUpdated,
                 fetchAllData,
                 formatPrice,
-                getPriceColor
+                getPriceColor,
+                getPerpPrice
             };
         }
     }).mount('#app');
